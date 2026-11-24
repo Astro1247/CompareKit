@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.5
+
+- Updated the diff engine, React, and development tooling.
+- Moved CI and Docker builds to Node.js 26 LTS and updated the NGINX runtime and proxy to 1.30.8.
+- Added a downloadable standalone build to successful GitHub CI runs on the default branch.
+
 ## 0.1.4
 
 - Highlighted changed indentation and trailing whitespace in the Text workspace without coloring matching lines as additions or removals.

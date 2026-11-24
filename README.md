@@ -2,7 +2,7 @@
 
 CompareKit is an MIT-licensed, self-hosted workspace for comparing and merging text, files and directories. Paste into either Monaco editor or open local files to begin. Comparisons, hashes and merges run in the browser. The static host needs no database, accounts, API or outbound internet access after installation.
 
-[GitHub publishing and live demo setup](docs/github-publishing.md)
+[Try the latest GitHub build](docs/github-publishing.md#try-a-build-from-github-actions) · [Live demo setup and publishing](docs/github-publishing.md)
 
 ![CompareKit split comparison with inline merge arrows](docs/screenshots/workspace-1280.png)
 

@@ -25,6 +25,10 @@ Set the description, website, and topics using the gear next to **About** on the
 
 3. Confirm GitHub recognized the MIT license and the **CI** workflow passed. Enable private vulnerability reporting in the repository's security settings so the reporting path in [SECURITY.md](../SECURITY.md) is available. [GitHub guide to private vulnerability reporting](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/configure-vulnerability-reporting/configure-for-a-repository)
 
+## Try a build from GitHub Actions
+
+Open the latest successful **CI** run for `main` and download **comparekit-standalone** under **Artifacts**. Unzip it, run `node scripts/serve.mjs` from the extracted folder, and open `http://127.0.0.1:8080`. Select **Try sample** to compare the bundled examples. The artifact contains the compiled app and standalone server and needs no npm install.
+
 ## Enable the demo on GitHub Pages
 
 1. Confirm the repository is public or that your GitHub plan supports Pages on private repositories. Open **Settings → Pages** and set **Build and deployment → Source** to **GitHub Actions**. [GitHub Pages plan availability](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages)
@@ -37,11 +41,11 @@ CompareKit's workers process inputs in the visitor's browser. The hosted demo sh
 
 ## Publish a versioned release
 
-After CI passes, create a tag matching the version in `package.json` and push that tag to GitHub. The current version is `0.1.4`.
+After CI passes, create a tag matching the version in `package.json` and push that tag to GitHub. The current version is `0.1.5`. Use `github` instead of `origin` if you added GitHub as a separate remote above.
 
 ```sh
-git tag -a v0.1.4 -m "CompareKit v0.1.4"
-git push github v0.1.4
+git tag -a v0.1.5 -m "CompareKit v0.1.5"
+git push origin v0.1.5
 ```
 
-Run **Actions → Release → Run workflow** from `main` with `v0.1.4` as the tag input. The workflow publishes the standalone archive and checksum to GitHub Releases and a versioned `linux/amd64` and `linux/arm64` image to GHCR. Set the GHCR package visibility to **Public** if you want visitors to pull the image anonymously. [GitHub guide to container package visibility](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#pushing-container-images)
+Run **Actions → Release → Run workflow** from `main` with `v0.1.5` as the tag input. The workflow publishes the standalone archive and checksum to GitHub Releases and a versioned `linux/amd64` and `linux/arm64` image to GHCR. Set the GHCR package visibility to **Public** if you want visitors to pull the image anonymously. [GitHub guide to container package visibility](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#pushing-container-images)
