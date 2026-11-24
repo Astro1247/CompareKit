@@ -1,0 +1,19 @@
+version: 2
+# Remove the zero limits to resume routine version update pull requests.
+updates:
+  - package-ecosystem: npm
+    directory: /
+    open-pull-requests-limit: 0
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: /
+    open-pull-requests-limit: 0
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
+    open-pull-requests-limit: 0
+    schedule:
+      interval: monthly
+

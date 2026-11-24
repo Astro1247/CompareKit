@@ -1,0 +1,13 @@
+node_modules/
+dist/
+references/
+test-results/
+playwright-report/
+qa-artifacts/
+release/
+.env
+.env.*
+!.env.example
+.npmrc
+*.key
+*.pem

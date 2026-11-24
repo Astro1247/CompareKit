@@ -1,0 +1,69 @@
+name: CI
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+
+jobs:
+  application:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm audit --audit-level=moderate
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium firefox
+      - run: npm run test:browser
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: failure()
+        with:
+          name: browser-diagnostics
+          path: test-results/
+          if-no-files-found: ignore
+
+  containers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Standard Compose
+        run: |
+          docker compose up --build --wait
+          curl --fail http://127.0.0.1:8080/healthz
+          curl --fail --head http://127.0.0.1:8080/ | grep -i "connect-src 'none'"
+          docker compose down
+      - name: Isolated Compose
+        run: |
+          docker compose -p comparekit-isolated -f compose.hardened.yaml up --wait
+          curl --fail http://127.0.0.1:8080/healthz
+          test "$(docker network inspect comparekit-isolated_backend --format '{{.Internal}}')" = true
+          app_id=$(docker compose -p comparekit-isolated -f compose.hardened.yaml ps -q app)
+          published_ports=$(docker port "$app_id")
+          test -z "$published_ports"
+          routes=$(docker compose -p comparekit-isolated -f compose.hardened.yaml exec -T app ip route)
+          if grep -q '^default' <<< "$routes"; then
+            echo "The isolated app has a default route."
+            exit 1
+          fi
+          if docker compose -p comparekit-isolated -f compose.hardened.yaml exec -T app wget -T 3 -q -O /dev/null http://1.1.1.1/; then
+            echo "The isolated app reached an external address."
+            exit 1
+          fi
+      - name: Clean up
+        if: always()
+        run: |
+          docker compose down
+          docker compose -p comparekit-isolated -f compose.hardened.yaml down
+

@@ -1,0 +1,43 @@
+{
+  "name": "comparekit",
+  "version": "0.1.4",
+  "description": "Privacy-first diff and merge for text, files, and folders. Runs in your browser and can be self-hosted with Docker.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=22.12" },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build && node scripts/notices.mjs",
+    "start": "node scripts/serve.mjs",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome lint src tests scripts",
+    "format:check": "biome format src tests scripts",
+    "test": "tsx --test tests/*.test.ts",
+    "test:browser": "playwright test",
+    "benchmark": "tsx tests/benchmark.ts"
+  },
+  "dependencies": {
+    "diff": "8.0.4",
+    "@noble/hashes": "2.2.0",
+    "fflate": "0.8.3",
+    "ignore": "7.0.5",
+    "marked": "18.3.0",
+    "monaco-editor": "0.58.0",
+    "parse5": "8.1.1",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "yaml": "2.9.1"
+  },
+  "overrides": { "esbuild": "0.28.1" },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.4",
+    "@playwright/test": "1.61.1",
+    "@types/node": "24.10.1",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
+    "tsx": "4.21.0",
+    "typescript": "5.9.3",
+    "vite": "8.3.5"
+  }
+}

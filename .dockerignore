@@ -1,0 +1,15 @@
+.git
+.github
+references
+node_modules
+dist
+test-results
+qa-artifacts
+release
+playwright-report
+docs/screenshots
+.env
+.env.*
+.npmrc
+**/*.key
+**/*.pem

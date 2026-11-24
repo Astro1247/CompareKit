@@ -1,0 +1,44 @@
+services:
+  app:
+    image: comparekit:local
+    build: .
+    networks: [backend]
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 96m
+    pids_limit: 32
+    restart: unless-stopped
+  proxy:
+    image: nginxinc/nginx-unprivileged:1.30-alpine@sha256:f5116ed4606f3eb015dd4a8e28cb9b351476dc0ad4bc6e9f93b19cec130cdf03
+    user: "101:101"
+    entrypoint: ["nginx", "-g", "daemon off;"]
+    command: []
+    depends_on:
+      app:
+        condition: service_healthy
+    networks: [frontend, backend]
+    ports:
+      - "${COMPAREKIT_BIND:-127.0.0.1}:${COMPAREKIT_PORT:-8080}:8080"
+    volumes:
+      - ./docker/proxy.conf:/etc/nginx/nginx.conf:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 96m
+    pids_limit: 32
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+networks:
+  frontend:
+  backend:
+    internal: true
+
