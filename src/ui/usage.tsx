@@ -1,6 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react'
 import { getUsageChoice, setUsageChoice, subscribeUsageChoice, trackUsage, usageStorageKey } from '../usage'
-import { Button, Toggle } from './controls'
+import { Button, Icon, Toggle } from './controls'
 
 export function UsageNotice() {
   const choice = useSyncExternalStore(subscribeUsageChoice, getUsageChoice)
@@ -11,13 +11,21 @@ export function UsageNotice() {
   if (choice !== null) return null
   return (
     <aside className="usage-notice" aria-label="Usage metrics">
-      <strong>Usage metrics</strong>
-      <p>
-        Umami counts visits and feature use. Your text, files, and comparison results stay in this browser.
-      </p>
-      <div className="form-row">
-        <Button onClick={() => setUsageChoice('on')}>Keep on</Button>
-        <Button onClick={() => setUsageChoice('off')}>Turn off</Button>
+      <header className="usage-notice-heading">
+        <span className="usage-notice-lock">
+          <Icon name="lock" size={17} />
+        </span>
+        <h2>Your comparisons stay private</h2>
+      </header>
+      <p>All comparison data stays in this browser, including your text, files, and results.</p>
+      <p>Usage metrics are on. Umami counts visits and feature use to help us improve CompareKit.</p>
+      <div className="usage-notice-actions">
+        <Button className="accent-button" onClick={() => setUsageChoice('on')}>
+          Got it
+        </Button>
+        <Button className="outlined" onClick={() => setUsageChoice('off')}>
+          Turn off metrics
+        </Button>
       </div>
     </aside>
   )

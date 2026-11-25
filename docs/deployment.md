@@ -82,3 +82,5 @@ For GitHub Pages, add the following repository variables under **Settings → Se
 
 Set both together to use your collector. The hosted project's workflow can supply its own default pair. Build with both pairs unset to serve a telemetry-free copy. The collector needs to accept cross-origin POST requests from the deployment. The site uses the public collection endpoint and needs no API key. [Umami collection API](https://docs.umami.is/docs/api/sending-stats) · [What the hosted site sends](../SECURITY.md#hosted-usage-metrics)
 
+If several deployments use one collector, create a separate Umami website ID for each deployment to keep their reports separate. If deployments already share an ID, use Umami's **Hostname** filter to view traffic for one hostname at a time. [Umami website setup](https://docs.umami.is/docs/add-a-website) · [Umami filters](https://docs.umami.is/docs/filters)
+

@@ -12,7 +12,7 @@ A share URL includes its payload after the fragment marker. Browsers generally e
 
 ## Hosted usage metrics
 
-When a static deployment is configured with Umami, usage metrics start enabled. Select **Turn off** in the notice or change **Settings → Privacy → Send usage metrics to Umami** at any time. The choice applies to the current browser and collector. CompareKit also honors the browser's Global Privacy Control signal.
+When a static deployment is configured with Umami, usage metrics start enabled. Select **Turn off metrics** in the notice or change **Settings → Privacy → Send usage metrics to Umami** at any time. The choice applies to the current browser and collector. CompareKit also honors the browser's Global Privacy Control signal.
 
 Requests use a fixed page path and a list of action names for visits, samples, modes, merge buttons, sessions, options, and exports. The sender adds the deployment hostname and the public Umami website ID. It excludes comparison inputs and outputs, names and paths of local files, clipboard contents, search and filter values, error messages, URL queries and fragments, cookies, and referrers. Umami processes the IP address and browser user agent when estimating visitor counts. [Umami metric definitions](https://docs.umami.is/docs/metric-definitions#visitor-identification)
 
