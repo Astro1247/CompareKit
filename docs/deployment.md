@@ -41,13 +41,33 @@ location / {
 
 Use a certificate trusted by client devices. Plain HTTP on a LAN supports downloads, built-in editor paste, standard directory selection and SHA-256 via bundled JavaScript. The copy action tries the browser's legacy clipboard mechanism when the secure API is unavailable. It offers a download alternative if the browser blocks clipboard access. The standard picker exposes files and relative paths. It omits empty directories.
 
-## Standalone static deployment
+## Standalone and static hosting
 
-`npm ci && npm run build` creates `dist/`. Serve it with `node scripts/serve.mjs` or copy it to your own static server. The server bundled with CompareKit sets security headers, gzip compression and cache policies. For another static host, use the equivalent policies in [docker/security-headers.conf](../docker/security-headers.conf). The inline CSP in `index.html` also restricts scripts, connections and workers. Set the HTTP `frame-ancestors` header when using your own server.
+### Use a prebuilt CI artifact
 
-## Release packaging
+1. Sign in to GitHub and open a successful **CI** run for `main`. Download **comparekit-standalone** under **Artifacts**. [CompareKit CI runs](https://github.com/Astro1247/CompareKit/actions/workflows/ci.yml) · [GitHub artifact documentation](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts)
+2. Extract the ZIP and run `node scripts/serve.mjs` from the extracted directory with Node.js 22.12 or later.
+3. Open [CompareKit on localhost](http://127.0.0.1:8080).
 
-For GitHub Pages and the public release process, see [Publish CompareKit on GitHub](github-publishing.md).
+### Build from source
 
-The GitHub release workflow is manually triggered for a pre-existing tag matching `package.json`. It packages the standalone build with its notices and SHA-256 checksum, then builds and pushes an OCI image for `linux/amd64` and `linux/arm64` to the repository's GHCR namespace. The Docker build runs the architecture-independent browser compilation on the builder's platform and packages the static output into the selected Nginx runtime. No release or image publication is required for local builds.
+From the project checkout, use Node.js 22.12 or later and npm.
+
+```sh
+npm ci
+npm run build
+node scripts/serve.mjs
+```
+
+The server defaults to `127.0.0.1:8080`. Set `HOST` and `PORT` to change the listener. The server works offline once you have the compiled files.
+
+### Serve from an existing web server
+
+Use `dist/` as the document root. The bundled server sets security headers, gzip compression, and cache policies. For another static host, use the equivalent policies in [docker/security-headers.conf](../docker/security-headers.conf). The policy in `index.html` also restricts scripts, connections, and workers. Send `frame-ancestors` as an HTTP header to control embedding. Serve the app over HTTP or HTTPS so the browser can load its modules and workers.
+
+## GitHub Pages
+
+To host your own copy from a GitHub fork with `main` as its default branch, enable the fork's Actions workflows and select **GitHub Actions** as the source under **Settings → Pages**. Run **Deploy demo to GitHub Pages** from the **Actions** tab with `main` selected. The deploy job shows the site URL, and subsequent pushes to `main` rebuild the site. [GitHub Pages publishing sources](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
+
+The workflow uploads the static build. Pages serves the browser policy from `index.html`. Use Docker or the standalone server if your deployment requires the bundled HTTP security headers.
 

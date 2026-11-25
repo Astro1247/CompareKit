@@ -1,26 +1,32 @@
-# Verification
+# Tests and benchmarks
 
-## Automated and deployment checks
+## Check a local change
 
-- Formatting, lint, strict TypeScript and the production build passed locally.
-- All 18 core tests passed. Coverage includes whitespace comparison ranges, two-way merging, mixed newlines and BOM handling, JSON precision, three-way conflict boundaries, scroll alignment, history, session validation, folder exports and escaped reports. Git and GNU patch applied generated patches.
-- Chromium and Firefox each ran fourteen browser scenarios against the built app. Coverage includes mixed indentation and content edits, navigation to whitespace-only changes in folded text, synchronized scrolling, inline three-way conflict resolution, bidirectional merging, directory and export flows, share import, a 10,000-line file and non-secure HTTP folder selection.
-- Browser checks blocked external requests, exercised untrusted content and the document preview, and inspected browser storage. No external requests were observed and default comparison content was absent from persistent storage.
-- Standard and isolated Compose both returned HTTP 200. The hardened app used a read-only root, dropped all capabilities and had no published port or default route. An outbound connection from that container failed with Network unreachable.
-- The Linux amd64 image ran through Compose. The Linux arm64 image built locally and reported the expected architecture.
-- npm reported zero known advisories for the resolved dependencies at the time of verification.
-- The extracted 3.76 MB standalone ZIP served the app and health endpoint without installing packages.
+Use Node.js 22.12 or later with Git and GNU patch on your path. On Windows, set `PATCH_EXE` to the full path of GNU patch if necessary. Git for Windows includes it under `usr/bin/patch.exe`.
 
-## GitHub publishing checks
+```sh
+npm ci
+npm run format:check
+npm run lint
+npm run typecheck
+npm test
+```
 
-- The Pages test served the production build at a repository subpath and ran text and folder comparisons with the browser policy from HTML. Chromium and Firefox loaded the required assets and workers from that subpath.
-- The CI, Pages, and release workflows passed actionlint and ShellCheck. Biome passed with non-blocking style advisories.
-- The standalone tarball and checksum used by the release workflow were built locally. The extracted tarball contained the bundled notices and served the app and health endpoint without installing packages.
-- The initial Pages deployment and GHCR release can be verified after connecting a public GitHub repository. [Publishing instructions](github-publishing.md)
+The core tests cover comparison and merge ranges, whitespace and line endings, three-way conflict resolution, sessions, folder exports, and report escaping. The patch tests apply generated files using Git and GNU patch.
+
+## Test the production app
+
+```sh
+npm run build
+npx playwright install chromium firefox
+npm run test:browser
+```
+
+The browser tests cover comparisons, editing, merging, folder selection, exports, session imports, and privacy. The Pages smoke test serves the compiled app under a project subpath and checks that text and folder comparisons can load their assets and workers with the policy from the HTML. CI also checks both Docker Compose deployments. [CI runs](https://github.com/Astro1247/CompareKit/actions/workflows/ci.yml) · [Deployment guide](deployment.md)
 
 ## Benchmarks
 
-Local measurements on Windows with Node 25.3.0 and an Intel Core i9-11900K. Text times are the median of five diff-engine runs. The folder time measures SHA-256 processing of 6,000 synthetic files representing 3,000 paths. These measurements cover computation and exclude browser rendering, worker startup and disk latency.
+Example measurements on Windows with Node 25.3.0 and an Intel Core i9-11900K. Text times are the median of five diff-engine runs. The folder time measures SHA-256 processing of 6,000 synthetic files representing 3,000 paths. These measurements cover computation and exclude browser rendering, worker startup, and disk latency.
 
 | Input | Size per text side | Measured time |
 | --- | ---: | ---: |
@@ -32,7 +38,7 @@ Local measurements on Windows with Node 25.3.0 and an Intel Core i9-11900K. Text
 
 Run `npm run benchmark` to reproduce the measurements.
 
-## Visual and upstream checks
+## Screenshots
 
 CompareKit and the locally built Text Diff View comparison used the same YAML fixture at [1280 × 720](screenshots/workspace-1280.png), [1920 × 1080](screenshots/workspace-1920.png), [2560 × 1440](screenshots/workspace-2560.png) and [3840 × 2160](screenshots/workspace-3840.png). The workspace, including pane controls, used at least 84% of the viewport at each tested size. The capture harness also ran Delta's text and folder modes with the same fixtures.
 
