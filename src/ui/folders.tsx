@@ -18,11 +18,18 @@ import {
 } from '../core/folders'
 import type { FolderRequest } from '../core/folder.worker'
 import type { Side } from '../core/text'
+import { trackUsage } from '../usage'
 import { Button, bytes, Dialog, Icon, Toggle } from './controls'
 import { workerTask } from './worker-task'
 
 type Folders = Partial<Record<Side, PickedFolder>>
 type WorkerMessage = { progress?: { done: number; total: number }; error?: string; result?: FolderResult }
+const exportEvents = {
+  copy: 'folder_export_summary',
+  report: 'folder_export_report',
+  patch: 'folder_export_patch',
+  zip: 'folder_export_zip',
+} as const
 export function FolderWorkspace({
   hidden,
   context,
@@ -132,6 +139,8 @@ export function FolderWorkspace({
         setResult(data.result)
         setLastFilters(filters)
         stop()
+        trackUsage('folders_compared')
+        if (Object.values(filters).some(Boolean)) trackUsage('folder_filters_applied')
       }
     }
     scanWorker.onerror = () => {
@@ -163,6 +172,7 @@ export function FolderWorkspace({
         staged.current.set(path, text)
         setStagedCount(staged.current.size)
         message('Staged for folder export.')
+        trackUsage('folder_edit_staged')
       }
       function navigate(direction: number) {
         const next = textEntries[current + direction]
@@ -178,6 +188,7 @@ export function FolderWorkspace({
         textEntries.map((item) => item.path),
         openText,
       )
+      trackUsage('folder_file_opened')
     } catch (error) {
       if (operation === request.current) fail(error)
     }
@@ -213,6 +224,7 @@ export function FolderWorkspace({
         if (typeof output === 'string') download('folders.patch', output)
         else download('changed-files.zip', output, 'application/zip')
       }
+      trackUsage(exportEvents[kind])
     } catch (error) {
       if (!(error instanceof Error) || error.message) fail(error)
     }

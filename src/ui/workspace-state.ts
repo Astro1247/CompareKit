@@ -3,6 +3,7 @@ import CompareWorker from '../core/compare.worker?worker'
 import { type Session, blankSession, parseSession } from '../core/session'
 import type { Comparison, ComparisonOptions } from '../core/text'
 import { visualDefaults, type Visual } from '../editor/workspace'
+import { trackUsage } from '../usage'
 
 export const prefsKey = 'comparekit.preferences.v1'
 export const savesKey = 'comparekit.sessions.v1'
@@ -119,6 +120,7 @@ export function useComparison(session: Session, manual: boolean, revision: numbe
             options,
             error: data.error,
           })
+          if (data.diff && !data.error) trackUsage('text_compared', true)
         }
         task.onerror = () => fail('The comparison worker could not start.')
         timeout = setTimeout(

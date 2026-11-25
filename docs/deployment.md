@@ -71,3 +71,14 @@ To host your own copy from a GitHub fork with `main` as its default branch, enab
 
 The workflow uploads the static build. Pages serves the browser policy from `index.html`. Use Docker or the standalone server if your deployment requires the bundled HTTP security headers.
 
+### Enable Umami metrics on a static deployment
+
+For GitHub Pages, add the following repository variables under **Settings → Secrets and variables → Actions → Variables**. For another static host, set them when running `npm run build` and serve the resulting `dist/`.
+
+| Variable | Value |
+| --- | --- |
+| `COMPAREKIT_UMAMI_ENDPOINT` | Your HTTPS collection URL, such as `https://metrics.example.com/api/send` |
+| `COMPAREKIT_UMAMI_WEBSITE_ID` | The public website UUID from Umami |
+
+Set both together to use your collector. The hosted project's workflow can supply its own default pair. Build with both pairs unset to serve a telemetry-free copy. The collector needs to accept cross-origin POST requests from the deployment. The site uses the public collection endpoint and needs no API key. [Umami collection API](https://docs.umami.is/docs/api/sending-stats) · [What the hosted site sends](../SECURITY.md#hosted-usage-metrics)
+

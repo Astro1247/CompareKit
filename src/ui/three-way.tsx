@@ -12,10 +12,17 @@ import {
   type Resolution,
 } from '../core/three-way'
 import { CodePane, type LineMark, type Visual } from '../editor/workspace'
+import { trackUsage } from '../usage'
 import { Button } from './controls'
 import { useThreeWayScroll } from './three-way-scroll'
 
 const resolutions = ['A', 'B', 'Base', 'Both'] as const
+const resolutionEvents = {
+  A: 'three_way_accept_a',
+  B: 'three_way_accept_b',
+  Base: 'three_way_accept_base',
+  Both: 'three_way_accept_both',
+} as const
 const emptyChoices: MergeState['choices'] = {}
 const panes = [
   ['base', 'Base', 'base'],
@@ -74,6 +81,7 @@ export function ThreeWorkspace({
         )
         setRevealRequest(0)
         setError(error)
+        if (!error && values.some(Boolean)) trackUsage('three_way_compared', true)
       }
       comparison.onmessage = ({ data }: MessageEvent<{ parts?: MergePart[]; error?: string }>) =>
         finish(data.parts ?? [], data.error ?? '')
@@ -157,9 +165,10 @@ export function ThreeWorkspace({
         : ([...items].reverse().find((item) => item.id < selected) ?? items.at(-1))
     if (next) jump(next.id)
   }
-  function accept(item: MergeChange, choice: Resolution) {
+  function accept(item: MergeChange, choice: Resolution, arrow?: 'A' | 'B') {
     if (!confirmRegenerate()) return
     updateMerge({ layout: mergeLayout, choices: { ...choices, [item.id]: { choice } } })
+    trackUsage(arrow ? (arrow === 'A' ? 'three_way_arrow_a' : 'three_way_arrow_b') : resolutionEvents[choice])
   }
   function gutter(id: number, key: 'A' | 'B') {
     if (!fresh || error) return null
@@ -173,7 +182,7 @@ export function ThreeWorkspace({
         aria-pressed={choices[id]?.choice === key}
         onClick={() => {
           jump(id)
-          accept(item, key)
+          accept(item, key, key)
         }}
       >
         {key}
@@ -222,7 +231,10 @@ export function ThreeWorkspace({
           icon="link"
           aria-pressed={visual.threeWayScroll}
           title="Scroll all merge panes together vertically"
-          onClick={() => setScrollSync(!visual.threeWayScroll)}
+          onClick={() => {
+            setScrollSync(!visual.threeWayScroll)
+            trackUsage('three_way_sync_changed')
+          }}
         >
           Sync scrolling
         </Button>
@@ -276,7 +288,10 @@ export function ThreeWorkspace({
           icon="export"
           disabled={!canAct}
           onClick={() => {
-            if (confirmUnresolved()) download('merged.txt', result)
+            if (confirmUnresolved()) {
+              download('merged.txt', result)
+              trackUsage('three_way_download')
+            }
           }}
         >
           Download result
@@ -421,6 +436,7 @@ export function ThreeWorkspace({
                     { layout: mergeLayout, choices: { ...choices, [change.id]: { manual } } },
                     'conflict-' + change.id,
                   )
+                  trackUsage('three_way_manual_resolution', true)
                 }}
               />
             </label>

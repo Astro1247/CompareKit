@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Added opt-out usage metrics for hosted builds configured with Umami. Comparison data stays in the browser.
+
 ## 0.1.5
 
 - Updated the diff engine, React, and development tooling.

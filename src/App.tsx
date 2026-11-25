@@ -39,6 +39,7 @@ import { Button, Dialog, Icon, Popover } from './ui/controls'
 import { FolderWorkspace } from './ui/folders'
 import { languages, Settings, ShortcutHelp } from './ui/settings'
 import { ThreeWorkspace } from './ui/three-way'
+import { UsageNotice } from './ui/usage'
 import {
   getLocal,
   loadStored,
@@ -50,6 +51,7 @@ import {
   useSystemDark,
 } from './ui/workspace-state'
 import { workerTask } from './ui/worker-task'
+import { type UsageEvent, trackUsage, usageStorageKey } from './usage'
 
 const modes = [
   ['text', 'Text', 'text'],
@@ -70,6 +72,23 @@ type Panel =
   | 'search'
   | 'patch'
   | 'preview'
+const panelEvents: Partial<Record<Panel, UsageEvent>> = {
+  settings: 'settings_opened',
+  export: 'export_opened',
+  sessions: 'sessions_opened',
+  shortcuts: 'shortcuts_opened',
+  search: 'search_opened',
+  preview: 'preview_opened',
+}
+const modeEvents = { text: 'mode_text', folders: 'mode_folders', three: 'mode_three_way' } as const
+const mergeEvents = { left: 'text_merge_original', right: 'text_merge_modified' } as const
+const arrowEvents = { left: 'text_merge_arrow_original', right: 'text_merge_arrow_modified' } as const
+const exportEvents = {
+  raw: 'export_preview',
+  copy: 'export_copy',
+  patch: 'export_patch',
+  html: 'export_html',
+} as const
 type FolderDocument = {
   path: string
   stage: (text: string) => void
@@ -138,6 +157,11 @@ export default function App() {
     ([key, value]) => key !== 'context' && (Array.isArray(value) ? value.length : value),
   ).length
 
+  useEffect(() => {
+    const event = panelEvents[panel]
+    if (event) trackUsage(event)
+  }, [panel])
+
   const message = useCallback((text: string) => {
     window.clearTimeout(messageTimer.current)
     setNotice(text)
@@ -184,6 +208,7 @@ export default function App() {
   function moveHistory(direction: 'undo' | 'redo') {
     const next = history.current[direction](sessionRef.current)
     if (!next) return
+    trackUsage(direction)
     asyncRevision.current++
     sessionRef.current = next
     setSession(next)
@@ -193,6 +218,7 @@ export default function App() {
     setRevision((value) => value + 1)
   }
   function switchMode(value: Mode) {
+    if (value !== mode) trackUsage(modeEvents[value])
     asyncRevision.current++
     setMode(value)
     if (value === 'folders') return
@@ -205,9 +231,18 @@ export default function App() {
     const previous = sessionRef.current
     commit({ ...previous, left: previous.right, right: previous.left, bookmarks: [], merge: undefined })
     setRevision((value) => value + 1)
+    trackUsage('swap_sides')
   }
   function runCompare() {
     setRevision((value) => value + 1)
+  }
+  function compareManually() {
+    runCompare()
+    trackUsage('manual_compare')
+  }
+  function chooseLayout(value: boolean) {
+    if (value !== split) trackUsage(value ? 'layout_split' : 'layout_unified')
+    setSplit(value)
   }
   function clearBoth() {
     const previous = sessionRef.current
@@ -222,6 +257,7 @@ export default function App() {
   }
   function clear() {
     if (!window.confirm('Clear the active workspace, open sessions, folder data and undo history?')) return
+    trackUsage('workspace_cleared')
     asyncRevision.current++
     window.clearTimeout(messageTimer.current)
     history.current = new WorkspaceHistory()
@@ -290,6 +326,7 @@ export default function App() {
           : { [selection === 'pair' ? 'left' : selection]: read[0] }
       commit({ ...old, ...entries, bookmarks: [], merge: undefined })
       runCompare()
+      trackUsage('text_files_opened')
     } catch (error) {
       if (generation === asyncRevision.current && errorMessage(error)) message(errorMessage(error))
     }
@@ -326,6 +363,7 @@ export default function App() {
       ? old.bookmarks.filter((item) => item !== index)
       : [...old.bookmarks, index].slice(0, 1000)
     commit({ ...old, bookmarks }, '', false)
+    trackUsage('bookmark_toggled')
   }
   const marked = useMemo(
     () => blocks.flatMap((block, index) => (session.bookmarks.includes(block.a) ? [index] : [])),
@@ -339,7 +377,7 @@ export default function App() {
         : ([...marked].reverse().find((item) => item < current) ?? marked[marked.length - 1]),
     )
   }
-  function merge(side: Side, indexes: number[]) {
+  function merge(side: Side, indexes: number[], arrow = false) {
     if (!isReady || !indexes.length) return
     try {
       const old = sessionRef.current
@@ -352,6 +390,7 @@ export default function App() {
       checkText(text)
       commit({ ...old, merge: undefined, [side]: { ...old[side], text } })
       runCompare()
+      trackUsage((arrow ? arrowEvents : mergeEvents)[side])
       message(indexes.length + (indexes.length === 1 ? ' change applied.' : ' changes applied.'))
     } catch (error) {
       message(errorMessage(error))
@@ -400,6 +439,7 @@ export default function App() {
         if (new Blob([serialized]).size > MAX_SESSION)
           throw new Error('The session exceeds the 28 MiB import limit. Export panes individually.')
         download('comparison.comparekit.json', serialized, 'application/json')
+        trackUsage('export_session')
         return
       }
       const data = await transfer(
@@ -433,6 +473,7 @@ export default function App() {
         setRaw(data)
         setPanel('raw')
       }
+      trackUsage(exportEvents[action])
     } catch (error) {
       if (errorMessage(error)) message(errorMessage(error))
     }
@@ -534,6 +575,7 @@ export default function App() {
     setTabs((items) => [...items.filter(({ id }) => id !== selectedId), tab].slice(-12))
     activate(next)
     setPanel('')
+    trackUsage(selectedId === undefined ? 'session_created' : 'session_switched')
   }
 
   const shortcutRef = useRef<(event: KeyboardEvent) => void>(() => {})
@@ -564,7 +606,7 @@ export default function App() {
     }
     if (event.altKey && shift && key === 'f') action = () => void fullscreen()
     if (mod) {
-      if (key === 'enter' && mode === 'text') action = runCompare
+      if (key === 'enter' && mode === 'text') action = compareManually
       if (key === 'o') action = () => choose('pair')
       if (key === 's') action = () => setPanel('export')
       if (key === '/') action = () => setPanel('shortcuts')
@@ -576,8 +618,12 @@ export default function App() {
       if (mode === 'text') {
         if (key === 'b' && !shift) action = bookmark
         if (key === 'x' && shift) action = swap
-        if (key === 'u' && shift) action = () => setSplit((value) => !value)
-        if (key === 'h' && shift) action = () => setFold((value) => !value)
+        if (key === 'u' && shift) action = () => chooseLayout(!split)
+        if (key === 'h' && shift)
+          action = () => {
+            setFold((value) => !value)
+            trackUsage('toggle_fold')
+          }
         if (key === 'c' && shift) action = () => exportAction('copy')
         if (key === 'p' && shift) action = () => exportAction('patch')
         if (key === 'f' && shift) action = () => setPanel('search')
@@ -681,7 +727,7 @@ export default function App() {
         </nav>
         <div className="grow" />
         <span className="local-indicator" title="Comparison content stays in this browser by default">
-          <Icon name="lock" size={13} /> Local only
+          <Icon name="lock" size={13} /> {usageStorageKey ? 'Local comparisons' : 'Local only'}
         </span>
         <Button icon="file" label="Sessions" onClick={() => setPanel('sessions')} />
         <Button icon="settings" label="Settings" onClick={() => setPanel('settings')} />
@@ -737,10 +783,10 @@ export default function App() {
               />
               <span className="separator" />
               <nav className="segments view-tabs" aria-label="Diff layout">
-                <Button icon="split" aria-pressed={split} onClick={() => setSplit(true)}>
+                <Button icon="split" aria-pressed={split} onClick={() => chooseLayout(true)}>
                   Split
                 </Button>
-                <Button icon="inline" aria-pressed={!split} onClick={() => setSplit(false)}>
+                <Button icon="inline" aria-pressed={!split} onClick={() => chooseLayout(false)}>
                   Unified
                 </Button>
               </nav>
@@ -751,6 +797,7 @@ export default function App() {
                 onClick={() => {
                   setOnlyChanges(false)
                   setFold(!fold)
+                  trackUsage('toggle_fold')
                 }}
               />
               <Button icon="settings" onClick={() => setPanel('settings')}>
@@ -762,7 +809,7 @@ export default function App() {
                 </span>
               )}
               {manual && (
-                <Button icon="bolt" onClick={runCompare}>
+                <Button icon="bolt" onClick={compareManually}>
                   Compare now
                 </Button>
               )}
@@ -855,6 +902,7 @@ export default function App() {
                   onClick={() => {
                     setOnlyChanges(true)
                     setFold(true)
+                    trackUsage('toggle_only_changes')
                   }}
                 >
                   Show only changes
@@ -1025,7 +1073,7 @@ export default function App() {
                   stale={!isReady}
                   options={session.options}
                   onChange={edit}
-                  onMerge={(side, index) => merge(side, [index])}
+                  onMerge={(side, index) => merge(side, [index], true)}
                   onDivider={setDivider}
                 />
                 {!hasContent && (
@@ -1062,6 +1110,7 @@ export default function App() {
                           merge: undefined,
                         })
                         runCompare()
+                        trackUsage('sample_opened')
                       }}
                     >
                       Try sample
@@ -1117,7 +1166,10 @@ export default function App() {
             <select
               aria-label="Syntax language"
               value={visual.language}
-              onChange={(event) => setVisual({ ...visual, language: event.target.value })}
+              onChange={(event) => {
+                setVisual({ ...visual, language: event.target.value })
+                trackUsage('editor_language')
+              }}
             >
               {languages.map(([id, name]) => (
                 <option key={id} value={id}>
@@ -1135,6 +1187,7 @@ export default function App() {
           <Button icon="close" label="Dismiss notification" onClick={() => message('')} />
         </div>
       )}
+      <UsageNotice />
       {panel === 'settings' && (
         <Settings
           close={() => setPanel('')}
@@ -1278,6 +1331,7 @@ export default function App() {
               else {
                 edit('right', pendingPatch.after)
                 runCompare()
+                trackUsage('patch_applied')
                 message('Patch applied.')
                 setPanel('')
                 setPendingPatch(undefined)
@@ -1384,6 +1438,7 @@ export default function App() {
                       onClick={() => {
                         activate(item)
                         setPanel('')
+                        trackUsage('session_switched')
                       }}
                     >
                       {item.title}

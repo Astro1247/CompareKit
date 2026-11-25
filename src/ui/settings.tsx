@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import type { ComparisonOptions } from '../core/text'
 import type { Visual } from '../editor/workspace'
+import { type UsageEvent, trackUsage } from '../usage'
 import { Button, Dialog, Toggle } from './controls'
+import { UsageSettings } from './usage'
 
 export const languages = [
   ['auto', 'Auto detect'],
@@ -42,6 +44,38 @@ const ignores = [
   ['json', 'Equivalent JSON formatting'],
   ['jsonKeys', 'Equivalent JSON key order'],
 ] as const
+const sections = [
+  ['Compare', 'settings_tab_compare'],
+  ['Editor', 'settings_tab_editor'],
+  ['Privacy', 'settings_tab_privacy'],
+] as const
+const optionEvents = {
+  whitespace: 'option_whitespace',
+  leading: 'option_leading',
+  trailing: 'option_trailing',
+  blank: 'option_blank',
+  case: 'option_case',
+  eol: 'option_eol',
+  unicode: 'option_unicode',
+  json: 'option_json',
+  jsonKeys: 'option_json_keys',
+  regex: 'option_regex',
+  context: 'option_context',
+} as const
+const visualEvents: Partial<Record<keyof Visual, UsageEvent>> = {
+  theme: 'editor_theme',
+  font: 'editor_font',
+  wrap: 'editor_wrap',
+  whitespace: 'editor_whitespace',
+  numbers: 'editor_numbers',
+  minimap: 'editor_minimap',
+  horizontal: 'editor_horizontal_scroll',
+  intensity: 'editor_highlight_style',
+  added: 'editor_highlight_style',
+  removed: 'editor_highlight_style',
+  modified: 'editor_highlight_style',
+  conflict: 'editor_highlight_style',
+}
 export function Settings({
   close,
   visual,
@@ -69,14 +103,18 @@ export function Settings({
   setStorage: (value: boolean) => void
   clearSaved: () => void
 }) {
-  const [section, setSection] = useState('Compare')
+  const [section, setSection] = useState<(typeof sections)[number][0]>('Compare')
   const [regex, setRegex] = useState('')
   const [error, setError] = useState('')
   function visualField<K extends keyof Visual>(key: K, value: Visual[K]) {
     setVisual({ ...visual, [key]: value })
+    const event = visualEvents[key]
+    if (event && value !== visual[key])
+      trackUsage(event, key === 'font' || event === 'editor_highlight_style')
   }
   function option<K extends keyof ComparisonOptions>(key: K, value: ComparisonOptions[K]) {
     setOptions({ ...options, [key]: value })
+    if (value !== options[key]) trackUsage(optionEvents[key], key === 'context')
   }
   function add() {
     if (!regex || options.regex.includes(regex)) return
@@ -93,8 +131,15 @@ export function Settings({
   return (
     <Dialog title="Settings" close={close}>
       <nav className="segments settings-tabs" aria-label="Settings sections">
-        {['Compare', 'Editor', 'Privacy'].map((tab) => (
-          <Button key={tab} aria-pressed={section === tab} onClick={() => setSection(tab)}>
+        {sections.map(([tab, event]) => (
+          <Button
+            key={tab}
+            aria-pressed={section === tab}
+            onClick={() => {
+              if (section !== tab) trackUsage(event)
+              setSection(tab)
+            }}
+          >
             {tab}
           </Button>
         ))}
@@ -167,10 +212,22 @@ export function Settings({
             </Button>
           </fieldset>
           <div className="option-grid">
-            <Toggle checked={showIgnored} change={setShowIgnored}>
+            <Toggle
+              checked={showIgnored}
+              change={(value) => {
+                setShowIgnored(value)
+                trackUsage('option_show_ignored')
+              }}
+            >
               Mark ignored differences
             </Toggle>
-            <Toggle checked={manual} change={setManual}>
+            <Toggle
+              checked={manual}
+              change={(value) => {
+                setManual(value)
+                trackUsage('option_manual')
+              }}
+            >
               Manual comparison
             </Toggle>
             <label className="field">
@@ -257,7 +314,7 @@ export function Settings({
                 </label>
               ))}
               <Button
-                onClick={() =>
+                onClick={() => {
                   setVisual({
                     ...visual,
                     intensity: 100,
@@ -266,7 +323,8 @@ export function Settings({
                     modified: '#7988f6',
                     conflict: '#b86a14',
                   })
-                }
+                  trackUsage('editor_highlight_style', true)
+                }}
               >
                 Reset colors
               </Button>
@@ -277,6 +335,7 @@ export function Settings({
       {section === 'Privacy' && (
         <>
           <p>Comparisons run in this browser. Saved sessions include the full contents of all panes.</p>
+          <UsageSettings />
           <Toggle checked={visual.remember} change={(value) => visualField('remember', value)}>
             Remember editor preferences
           </Toggle>
